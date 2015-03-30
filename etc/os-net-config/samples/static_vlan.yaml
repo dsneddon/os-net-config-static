@@ -1,0 +1,26 @@
+subnets:
+  -
+    name: storage
+    ip_netmask: 192.0.2.0/24
+    host_ip_range: '192.0.2.24, 192.0.2.200'
+
+network_config:
+  -
+    type: interface
+    name: nic1
+    use_dhcp: true
+  -
+    type: interface
+    name: nic2
+    use_dhcp: true
+  -
+    type: vlan
+    device: nic2
+    vlan_id: 201
+    addresses:
+      -
+        ip_netmask: '${storage_address}'
+    routes:
+      -
+        next_hop: '${storage_gateway}'
+        ip_netmask: '${storage_network}'
