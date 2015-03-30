@@ -1,0 +1,18 @@
+subnets:
+  -
+    name: tenant
+    ip_netmask: 192.0.2.0/24
+    host_ip_range: "192.0.2.10, 192.0.2.100"
+
+network_config:
+  -
+    type: interface
+    name: em1
+    use_dhcp: true
+  -
+    type: interface
+    name: em2
+    use_dhcp: false
+    addresses:
+    -
+      ip_netmask: ${tenant_address}
