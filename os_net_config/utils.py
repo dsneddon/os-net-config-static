@@ -101,10 +101,10 @@ def diff(filename, data):
 
 
 def tokenize_template(template):
-    """Extract out the tokens from a yaml template
+    """Extract out the tokens from a yaml template.
 
-    :param template: The os-net-config template with tokens to be replaced
-    :return list: Returns a list of the tokens in the template
+    :param template: The os-net-config template with tokens to be replaced.
+    :return list: Returns a list of the tokens in the template.
     """
     token = re.compile('\$\{.*\}')
     token_match = token.findall(template)
@@ -116,19 +116,26 @@ def process_template(template, replacements):
     """Perform string.template substitution based on the replacement dict.
 
     :param template: The raw template with tokens to be replaced.
-    :param replacements: A dict of tokens with replacement values
-    :return config: The raw os-net-config.yaml produced from the template.
+    :param replacements: A dict of tokens with replacement values.
+    :return config: The raw config.yaml produced from the template.
     """
     template_obj = Template(template)
     return template_obj.safe_substitute(replacements)
 
 
 def token_query(subnet, token_keys, ip_index):
+    """Lookup a single value based on the token split by underscores.
+
+    :param token_keys: An array of the token keys split by underscores.
+    :param ip_index: The ip_index value used to select a static IP.
+    :return value: The value based on the token_keys lookup.
+    """
     if token_keys[1] == "address":
-        if ip_index:
-            return subnet.address(int(ip_index))
-        else:
-            raise IndexError("Cannot assign address without ip_index in yaml.")
+        try:
+            ip_index_int = int(ip_index)
+            return subnet.address(ip_index_int)
+        except:
+            raise IndexError("Cannot assign address without ip_index.")
     elif (token_keys[1] == "ip") and (token_keys[2] == "netmask"):
         return getattr(subnet, token_keys[1] + '_' + token_keys[2])
     else:
@@ -136,11 +143,11 @@ def token_query(subnet, token_keys, ip_index):
 
 
 def replace_token(subnets, token_keys, ip_index):
-    """Replace field token with value
+    """Determine which subnet to use for replacement and make query.
 
-    :param subnets: List of subnet objects to use for replacement
-    :param token_keys: List of the token split by underscores
-    :return: replacement
+    :param subnets: List of subnet objects to use for replacement.
+    :param token_keys: List of the token split by underscores.
+    :return: Value to replace token in the template.
     """
     token_keys_ip = False
     if len(token_keys) > 5:
@@ -163,34 +170,32 @@ def replace_token(subnets, token_keys, ip_index):
 
 
 def replace_tokens(network_config, ip_index):
-    """ Replace tokens in a network_config with the replacement values
+    """ Replace all tokens in a network_config with the replacement values.
 
-    :param network_config: raw network_config yaml (may contain tokens)
-    :param subnets: array of subnets defined from subnets yaml in config
-    :param index: <subnet>_address returns the Nth address according to index
-    :return: rendered_config: network_config with tokens replaced
+    :param network_config: raw network_config yaml (may contain tokens).
+    :param subnets: array of subnets defined from subnets yaml in config.
+    :param index: <subnet>_address returns the Nth address according to index.
+    :return: rendered_config: network_config with tokens replaced.
     """
-
     subnets_array = yaml.load(network_config).get("subnets")
     subnets = []
     # Create subnets
-    for subnet in subnets_array:
-        subnet_name = ""
-        kwargs = {}
-        if "name" in subnet:
-            subnet_name = subnet["name"]
-        if "gateway" in subnet:
-            kwargs["gateway"] = subnet["gateway"]
-        if "host_ip_range" in subnet:
-            kwargs["host_ip_range"] = subnet["host_ip_range"]
-        logger.info('Creating subnet "%s" with parameters: %s' %
-                    (subnet_name, kwargs))
-        obj = objects.Subnet(subnet["ip_netmask"], subnet_name, **kwargs)
-        subnets.append(obj)
-    for subnet in subnets:
-        logger.debug('Subnets created from config file:')
-        logger.debug('Subnet created: "%s": %s' %
-                     (subnet.name, repr(subnet.network)))
+    if isinstance(subnets_array, list):
+        for subnet in subnets_array:
+            subnet_name = ""
+            kwargs = {}
+            if "name" in subnet:
+                subnet_name = subnet["name"]
+            if "gateway" in subnet:
+                kwargs["gateway"] = subnet["gateway"]
+            if "host_ip_range" in subnet:
+                kwargs["host_ip_range"] = subnet["host_ip_range"]
+                logger.info('Creating subnet "%s" with parameters: %s' %
+                            (subnet_name, kwargs))
+            obj = objects.Subnet(subnet["ip_netmask"], subnet_name, **kwargs)
+            logger.debug('Subnet created: "%s": %s' %
+                         (obj.name, repr(obj.network)))
+            subnets.append(obj)
     # replace tokens (if any) in network_config
     replacements = {}
     token_match = tokenize_template(network_config)

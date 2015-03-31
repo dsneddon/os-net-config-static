@@ -47,8 +47,12 @@ def parse_opts(argv):
                         """One of: ifcfg, eni, iproute.""",
                         default=None)
     parser.add_argument('-t', '--tripleo-dir', metavar='TRIPLEO_DIR',
-                        help="""directory with yaml file with ip_index.""",
+                        help="directory with yaml containing " +
+                             "os_net_config_ip_index.",
                         default='/etc/puppet/hieradata/')
+    parser.add_argument('-i', '--ip-index', metavar='IP_INDEX',
+                        help="""Override ip_index for static IP assignment.""",
+                        default='None')
     parser.add_argument(
         '-d', '--debug',
         dest="debug",
@@ -125,7 +129,7 @@ def main(argv=sys.argv):
                       'ceph.yaml',
                       'object.yaml',
                       'volume.yaml']
-    ip_index = ''
+    ip_index = opts.ip_index
 
     provider = None
     if opts.provider:
@@ -147,16 +151,17 @@ def main(argv=sys.argv):
             logger.error('Unable to set provider for this operating system.')
             return 1
 
-    # Read the known puppet hieradata files looking for IP index info
-    for filename in ooo_data_files:
-        path = opts.tripleo_dir + filename
-        if os.path.isfile(path):
-            with open(path) as yf:
-                ip_index = yaml.load(yf.read()).get("ip_index")
-                if ip_index:
-                    logger.debug("ip_index: %s:" % ip_index)
-                    break
-
+    if opts.ip_index == 'None':
+        # Read the known puppet hieradata files looking for IP index info
+        for filename in ooo_data_files:
+            path = opts.tripleo_dir + filename
+            if os.path.isfile(path):
+                with open(path) as yf:
+                    fc = yf.read()
+                    ip_index = yaml.load(fc).get('os_net_config_ip_index')
+                    if ip_index:
+                        logger.debug("ip_index: %s:" % ip_index)
+                        break
 
     # Read config file containing network configs to apply
     if os.path.exists(opts.config_file):

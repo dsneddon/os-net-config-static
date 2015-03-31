@@ -1,8 +1,8 @@
 subnets:
   -
     name: storage
-    ip_netmask: 192.0.2.0/24
-    host_ip_range: '192.0.2.24, 192.0.2.200'
+    ip_netmask: 192.0.3.0/24
+    host_ip_range: '192.0.3.24, 192.0.3.200'
 
 network_config:
   -

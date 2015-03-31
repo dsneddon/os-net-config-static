@@ -21,7 +21,7 @@ import tempfile
 from os_net_config.tests import base
 from os_net_config import utils
 
-_NETWORK_CONFIG_SUBNETS = """subnets:
+_NETWORK_CONFIG1_SUBNETS = """subnets:
   -
     name: storage
     ip_netmask: 192.168.2.0/24
@@ -44,7 +44,7 @@ _NETWORK_CONFIG1 = """network_config:
             gateway: ${storage_gateway}
 """
 
-_NETWORK_CONFIG_FINAL = """subnets:
+_NETWORK_CONFIG1_FINAL = """subnets:
   -
     name: storage
     ip_netmask: 192.168.2.0/24
@@ -63,6 +63,60 @@ network_config:
           -
             ip_netmask: 192.168.3.0/24
             gateway: 192.168.2.254
+"""
+
+_NETWORK_CONFIG2_JSON = """{ "subnets": [
+        {
+            "ip_netmask": "192.0.2.0/24",
+            "name": "tenant",
+            "host_ip_range": "192.0.2.1, 192.0.2.100"
+        }
+   ],
+  "network_config": [
+        {
+            "use_dhcp": True,
+             "type": "interface",
+             "name": "em1"
+        },
+        {
+            "use_dhcp": False,
+            "type": "interface",
+            "name": "em2",
+            "addresses": [
+                {
+                    "ip_netmask": "${tenant_address}"
+                }
+              ]
+        }
+  ]
+}
+"""
+
+_NETWORK_CONFIG2_FINAL = """{ "subnets": [
+        {
+            "ip_netmask": "192.0.2.0/24",
+            "name": "tenant",
+            "host_ip_range": "192.0.2.1, 192.0.2.100"
+        }
+   ],
+  "network_config": [
+        {
+            "use_dhcp": True,
+             "type": "interface",
+             "name": "em1"
+        },
+        {
+            "use_dhcp": False,
+            "type": "interface",
+            "name": "em2",
+            "addresses": [
+                {
+                    "ip_netmask": "192.0.2.1/24"
+                }
+              ]
+        }
+  ]
+}
 """
 
 class TestUtils(base.TestCase):
@@ -89,9 +143,14 @@ class TestUtils(base.TestCase):
 
         shutil.rmtree(tmpdir)
 
-    def test_replace_tokens(self):
+    def test_replace_tokens_yaml(self):
 
-        template = _NETWORK_CONFIG_SUBNETS + _NETWORK_CONFIG1
+        template = _NETWORK_CONFIG1_SUBNETS + _NETWORK_CONFIG1
         network_config = utils.replace_tokens(template, '5')
-        self.assertEquals(_NETWORK_CONFIG_FINAL, network_config)
+        self.assertEquals(_NETWORK_CONFIG1_FINAL, network_config)
 
+    def test_replace_tokens_json(self):
+
+        template = _NETWORK_CONFIG2_JSON
+        network_config = utils.replace_tokens(template, '0')
+        self.assertEquals(_NETWORK_CONFIG2_FINAL, network_config)
